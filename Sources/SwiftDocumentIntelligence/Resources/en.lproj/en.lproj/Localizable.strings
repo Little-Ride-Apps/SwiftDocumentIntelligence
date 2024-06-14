@@ -1,0 +1,16 @@
+/* 
+  Localizable.strings
+  
+
+  Created by Boaz James on 14/06/2024.
+  
+*/
+
+"OK" = "OK";
+"Dismiss" = "Dismiss";
+"Camera access denied/restricted" = "Camera access denied/restricted";
+"You won't be able to scan document unless you allow access to the Camera. Click settings to turn on camera access." = "You won't be able to scan document unless you allow access to the Camera. Click settings to turn on camera access.";
+"Proceed" = "Proceed";
+"Go to Settings" = "Go to Settings";
+"Scanning not supported" = "Scanning not supported";
+"Your device does not support scanning document. Please use a device with a camera." = "Your device does not support scanning document. Please use a device with a camera.";
