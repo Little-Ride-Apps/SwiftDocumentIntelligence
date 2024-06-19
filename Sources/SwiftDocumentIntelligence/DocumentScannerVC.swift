@@ -84,6 +84,7 @@ class DocumentScannerVC: DocumentBaseViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .whiteColor
         view.sdkCornerRadius = 36
+        view.isHidden = true
     
         return view
     }()
@@ -117,8 +118,17 @@ class DocumentScannerVC: DocumentBaseViewController {
     private let sessionQueue = DispatchQueue(label: "Capture Session Queue")
     private var boundingBox = CAShapeLayer()
     private var resetTimer: Timer?
+    private var isCapturingPhoto = false
     
-    var firstText = "jamhuri ya kenya"
+    var documentType = DocumentType.ID_FRONT
+    var delegate: DocumentScannerDelegate?
+    
+    private var firstText = "jamhuri ya kenya"
+    private var aspectRatio: CGFloat = 8 / 5
+    
+    private var frontIDDetails: FrontIDCardDetails?
+    private var backIdDetails: BackIDCardDetails?
+    private var licenseDetails: DrivingLicenseDetails?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -135,6 +145,8 @@ class DocumentScannerVC: DocumentBaseViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
+        UIApplication.shared.isIdleTimerDisabled = true
+        
         if (captureSession.isRunning == false) {
             startCaptureSession()
         }
@@ -142,6 +154,8 @@ class DocumentScannerVC: DocumentBaseViewController {
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        
+        UIApplication.shared.isIdleTimerDisabled = false
         
         if (captureSession.isRunning == true) {
             captureSession.stopRunning()
@@ -167,6 +181,34 @@ class DocumentScannerVC: DocumentBaseViewController {
         self.view.addSubview(btnCaptureContainerView)
         btnCaptureContainerView.addSubview(btnCapture)
         
+        switch documentType {
+        case .ID_FRONT:
+            firstText = "jamhuri ya kenya"
+            aspectRatio = 8 / 5
+            lblTitle.text = "ID Front".localized
+            lblMessage.text = "Align your ID within the rectangle".localized
+        case .ID_BACK:
+            firstText = "district"
+            aspectRatio = 8 / 5
+            lblTitle.text = "ID Back".localized
+            lblMessage.text = "Align your ID within the rectangle".localized
+        case .CERTIFICATE_OF_GOOD_CONDUCT:
+            firstText = "national police service"
+            aspectRatio = 70 / 99
+            lblTitle.text = "Police clearance certificate".localized
+            lblMessage.text = "Align your certificate within the rectangle".localized
+        case .PSV_BADGE:
+            firstText = "republic of kenya"
+            aspectRatio = 8 / 5
+            lblTitle.text = "PSV badge".localized
+            lblMessage.text = "Align your PSV badge within the rectangle".localized
+        case .DRIVING_LICENSE:
+            firstText = "driving licence"
+            aspectRatio = 8 / 5
+            lblTitle.text = "Driving Licence".localized
+            lblMessage.text = "Align your licence within the rectangle".localized
+        }
+        
     }
     
     override func setupSharedContraints() {
@@ -191,7 +233,7 @@ class DocumentScannerVC: DocumentBaseViewController {
         NSLayoutConstraint.activate([
             lblTitle.leadingAnchor.constraint(equalTo: safeAreaLayoutGuide.leadingAnchor, constant: 40),
             lblTitle.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -40),
-            lblTitle.topAnchor.constraint(equalTo: btnFlash.bottomAnchor, constant: 40)
+            lblTitle.topAnchor.constraint(equalTo: btnFlash.bottomAnchor, constant: aspectRatio > 1 ? 40 : 10)
         ])
         
         NSLayoutConstraint.activate([
@@ -250,10 +292,8 @@ class DocumentScannerVC: DocumentBaseViewController {
     }
     
     private func setupMask() {
-        // 1
-        let aspectRatio: CGFloat = 8 / 5
-        // Margin: 30
-        let width = self.view.frame.size.width - (30 * 2)
+        // Margin: 20
+        let width = self.view.frame.size.width - ((aspectRatio < 1 ? 50 : 20) * 2)
         let height = width / aspectRatio
         let overlayPath = UIBezierPath(rect: overlayView.bounds)
         
@@ -477,15 +517,32 @@ extension DocumentScannerVC: AVCapturePhotoCaptureDelegate {
         
         printObject("didFinishProcessingPhoto")
         
-        let texts = image.getRecognizedText(recognitionLevel: .accurate)
+        self.dismiss(animated: true) {
+            switch self.documentType {
+            case .ID_FRONT:
+                self.delegate?.didCaptureFrontID(image: image, details: self.frontIDDetails)
+            case .ID_BACK:
+                self.delegate?.didCaptureBackID(image: image, details: self.backIdDetails)
+            case .CERTIFICATE_OF_GOOD_CONDUCT:
+                break
+            case .DRIVING_LICENSE:
+                self.delegate?.didCaptureDrivingLicense(image: image, details: self.licenseDetails)
+            case .PSV_BADGE:
+                break
+            }
+        }
         
-        printObject("getRecognizedText", texts)
+//        let texts = image.getRecognizedText(recognitionLevel: .accurate)
+        
+//        printObject("getRecognizedText", texts)
     }
 }
 
 // Mark: - AVCaptureVideoDataOutputSampleBufferDelegate
 extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        guard !self.isCapturingPhoto else { return }
+        
         guard let frame = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             printObject("unable to get image from sample buffer")
             return
@@ -494,11 +551,70 @@ extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
         let ciImage = CIImage(cvPixelBuffer: frame)
         
         let image = UIImage(ciImage: ciImage)
+        
+        let texts = image.getRecognizedText(recognitionLevel: .accurate)
+        
+        printObject("frame texts", texts)
                 
-        if let firstText = image.getRecognizedText(recognitionLevel: .accurate).first, firstText.containsIgnoringCase(self.firstText) {
+        if let firstText = texts.first, firstText.containsIgnoringCase(self.firstText) {
             DispatchQueue.main.async { [weak self] in
                 self?.changeStrokeColor(canReadText: true)
                 self?.btnCapture.isEnabled = true
+            }
+            
+            switch self.documentType {
+            case .ID_FRONT:
+                let frontIdDetails = getFrontIDCardDetails(texts: texts)
+                printObject("frame frontIdDetails", frontIdDetails)
+                
+                if let frontIdDetails = frontIdDetails {
+                    if !(frontIdDetails.idNo ?? "").isEmpty && !(frontIdDetails.fullName ?? "").isEmpty && frontIdDetails.dateofBirth != nil {
+                        self.frontIDDetails = frontIdDetails
+                        
+                        printObject("frame final frontIdDetails", frontIdDetails)
+                        
+                        self.isCapturingPhoto = true
+                        DispatchQueue(label: "capturePhoto", qos: .background).async { [weak self] in
+                            self?.capturePhoto()
+                        }
+                    }
+                }
+            case .ID_BACK:
+                let backIdDetails = getBackIDCardDetails(texts: texts)
+                printObject("frame backIdDetails", backIdDetails)
+                
+                if let backIdDetails = backIdDetails {
+                    if !(backIdDetails.district ?? "").isEmpty {
+                        self.backIdDetails = backIdDetails
+                        
+                        printObject("frame final backIdDetails", backIdDetails)
+                        
+                        self.isCapturingPhoto = true
+                        DispatchQueue(label: "capturePhoto", qos: .background).async { [weak self] in
+                            self?.capturePhoto()
+                        }
+                    }
+                }
+            case .DRIVING_LICENSE:
+                let licenseDetails = getDrivingLicenseDetails(texts: texts)
+                printObject("frame licenseDetails", licenseDetails)
+                
+                if let licenseDetails = licenseDetails {
+                    if licenseDetails.idNo != nil && licenseDetails.licenceNo != nil && licenseDetails.expiryDate != nil {
+                        self.licenseDetails = licenseDetails
+                        
+                        printObject("frame final licenseDetails", licenseDetails)
+                        
+                        self.isCapturingPhoto = true
+                        DispatchQueue(label: "capturePhoto", qos: .background).async { [weak self] in
+                            self?.capturePhoto()
+                        }
+                    }
+                }
+            case .CERTIFICATE_OF_GOOD_CONDUCT:
+                break
+            case .PSV_BADGE:
+                break
             }
         } else {
             DispatchQueue.main.async { [weak self] in
@@ -508,4 +624,13 @@ extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
         }
 
     }
+}
+
+// Mark: - DocumentScannerDelegate
+public protocol DocumentScannerDelegate {
+    func didCaptureFrontID(image: UIImage, details: FrontIDCardDetails?)
+    
+    func didCaptureBackID(image: UIImage, details: BackIDCardDetails?)
+    
+    func didCaptureDrivingLicense(image: UIImage, details: DrivingLicenseDetails?)
 }

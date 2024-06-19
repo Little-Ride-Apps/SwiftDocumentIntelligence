@@ -85,6 +85,7 @@ class FaceRecognitionVC: DocumentBaseViewController {
         view.translatesAutoresizingMaskIntoConstraints = false
         view.backgroundColor = .whiteColor
         view.sdkCornerRadius = 36
+        view.isHidden = true
     
         return view
     }()
@@ -110,7 +111,6 @@ class FaceRecognitionVC: DocumentBaseViewController {
     private var captureSession = AVCaptureSession()
     private let videoOutput = AVCaptureVideoDataOutput()
     
-    
     private var code: String?
     
     private var scannedCode = UILabel()
@@ -126,6 +126,8 @@ class FaceRecognitionVC: DocumentBaseViewController {
     private var faceTurnedToTheLeft = false
     private var isTurningFaceToTheLeft = false
     private var previousYaw: Float = 0
+    private var isCapturingPhoto = false
+    var delegate: FaceRecognitionDelegate?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -142,6 +144,8 @@ class FaceRecognitionVC: DocumentBaseViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
+        UIApplication.shared.isIdleTimerDisabled = true
+        
         if (captureSession.isRunning == false) {
             startCaptureSession()
         }
@@ -149,6 +153,8 @@ class FaceRecognitionVC: DocumentBaseViewController {
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        
+        UIApplication.shared.isIdleTimerDisabled = false
         
         if (captureSession.isRunning == true) {
             captureSession.stopRunning()
@@ -557,9 +563,14 @@ class FaceRecognitionVC: DocumentBaseViewController {
                 } else if self.faceTurnedToTheRight && self.isTurningFaceToTheLeft && diffYaw > 0.5 {
                     self.faceTurnedToTheLeft = true
                     self.isTurningFaceToTheLeft = false
-                    self.lblMessage.text = "You can now take photo".localized
+                    self.lblMessage.text = "Keep your face straight to capture photo".localized
                     self.btnCapture.isEnabled = true
                     self.changeStrokeColor(canCapturePhoto: true)
+                } else if yaw == 0 && self.faceTurnedToTheRight && self.faceTurnedToTheLeft && !self.isCapturingPhoto {
+                    self.isCapturingPhoto = true
+                    DispatchQueue(label: "capturePhoto", qos: .background).asyncAfter(deadline: .now() + 4) { [weak self] in
+                        self?.capturePhoto()
+                    }
                 }
             } else {
                 self.isTurningFaceToTheLeft = false
@@ -621,6 +632,10 @@ extension FaceRecognitionVC: AVCapturePhotoCaptureDelegate {
         
         guard let data = photo.fileDataRepresentation(), let image  = UIImage(data: data) else { return }
         
+        self.dismiss(animated: true) {
+            self.delegate?.didCapturePhoto(image: image)
+        }
+        
         
     }
 }
@@ -652,4 +667,9 @@ extension FaceRecognitionVC: AVCaptureVideoDataOutputSampleBufferDelegate {
         }*/
 
     }
+}
+
+// Mark: - FaceRecognitionDelegate
+public protocol FaceRecognitionDelegate {
+    func didCapturePhoto(image: UIImage)
 }

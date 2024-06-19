@@ -19,4 +19,14 @@ extension String {
     func equalsIgnoringCase(_ string: String) -> Bool {
         return self.caseInsensitiveCompare(string) == .orderedSame
     }
+    
+    func hasNumber() -> Bool {
+        let numbersRange = self.rangeOfCharacter(from: .decimalDigits)
+        return numbersRange != nil
+    }
+    
+    func onlyDigits() -> String {
+        let filtredUnicodeScalars = unicodeScalars.filter { CharacterSet.decimalDigits.contains($0) }
+        return String(String.UnicodeScalarView(filtredUnicodeScalars))
+    }
 }

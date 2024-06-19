@@ -14,4 +14,25 @@ extension Date {
         formatter.locale = Locale(identifier: Locale.current.languageCode ?? "en")
         return formatter.string(from: self)
     }
+    
+    static func parseIdDate(dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: Locale.current.languageCode ?? "en")
+        formatter.dateFormat = "dd.MM.yyyy"
+        return formatter.date(from: dateString)
+    }
+    
+    static func parseLicenseDate(dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: Locale.current.languageCode ?? "en")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: dateString)
+    }
+    
+    static func parseLicenseDate2(dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: Locale.current.languageCode ?? "en")
+        formatter.dateFormat = "dd MMMM yyyy"
+        return formatter.date(from: dateString)
+    }
 }
