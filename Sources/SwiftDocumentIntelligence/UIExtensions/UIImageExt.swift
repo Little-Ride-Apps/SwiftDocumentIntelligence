@@ -26,8 +26,9 @@ extension UIImage {
                            minimumTextHeight: Float = 0.03125) -> [String] {
         var recognizedTexts = [String]()
         
-        guard let imageCGImage = self.cgImage else { return recognizedTexts }
-        let requestHandler = VNImageRequestHandler(cgImage: imageCGImage, options: [:])
+//        guard let imageCGImage = self.cgImage else { return recognizedTexts }
+        guard let imageData = self.jpegData(compressionQuality: 1) else { return recognizedTexts }
+        let requestHandler = VNImageRequestHandler(data: imageData, options: [:])
         
         if #available(iOS 13.0, *) {
             let request = VNRecognizeTextRequest { (request, error) in

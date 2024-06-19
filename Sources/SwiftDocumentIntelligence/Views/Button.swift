@@ -13,16 +13,19 @@ class IconButton: UIButton {
     
     var customBackgroundColor: UIColor = .clear {
         didSet {
-            if #available(iOS 15.0, *) {
-                var config = self.configuration
-                var backgroundConfig = UIBackgroundConfiguration.clear()
-                backgroundConfig.backgroundColor = customBackgroundColor
-                config?.background = backgroundConfig
-                
-                self.configuration = config
-            }
-            
-            backgroundColor = customBackgroundColor
+            setupBackgroundColor()
+        }
+    }
+    
+    var highlightBackgroundColor: UIColor = .clear {
+        didSet {
+            setupBackgroundColor()
+        }
+    }
+    
+    var disabledBackgroundColor: UIColor = .clear {
+        didSet {
+            setupBackgroundColor()
         }
     }
     
@@ -77,6 +80,23 @@ class IconButton: UIButton {
         }
     }
     
+    private func setupBackgroundColor() {
+        if #available(iOS 15.0, *) {
+            configurationUpdateHandler = { button in
+                switch button.state {
+                case .highlighted:
+                    button.configuration?.background.backgroundColor = self.highlightBackgroundColor
+                case .disabled:
+                    button.configuration?.background.backgroundColor = self.disabledBackgroundColor
+                default:
+                    button.configuration?.background.backgroundColor = self.customBackgroundColor
+                }
+            }
+        }
+        
+        self.backgroundColor = customBackgroundColor
+    }
+    
     func setupViews() {
         if #available(iOS 15, *) {
             var backgroundConfig = UIBackgroundConfiguration.clear()
@@ -100,7 +120,6 @@ class IconButton: UIButton {
             self.contentEdgeInsets = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
         }
         
-        self.backgroundColor = customBackgroundColor
         self.layer.backgroundColor = UIColor.clear.cgColor
         self.translatesAutoresizingMaskIntoConstraints = false
         self.isUserInteractionEnabled = true
@@ -111,6 +130,8 @@ class IconButton: UIButton {
         self.widthAnchor.constraint(equalToConstant: size.width).activate()
 //        self.contentHorizontalAlignment = .left
         self.tintColor = .whiteColor
+        
+        setupBackgroundColor()
         
     }
 }

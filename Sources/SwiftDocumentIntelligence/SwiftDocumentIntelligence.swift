@@ -12,4 +12,13 @@ public class SwiftDocumentIntelligence {
         
         parentViewController.present(navVC, animated: true)
     }
+    
+    public static func recognizeFace(parentViewController: UIViewController) {
+        let vc = FaceRecognitionVC()
+        let navVC = UINavigationController(rootViewController: vc)
+        navVC.isNavigationBarHidden = true
+        navVC.modalPresentationStyle = .fullScreen
+        
+        parentViewController.present(navVC, animated: true)
+    }
 }
