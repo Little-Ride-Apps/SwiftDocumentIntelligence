@@ -348,3 +348,61 @@ func getPoliceClearanceCertificateDetails(texts: [String]) -> PoliceClearanceCer
     return PoliceClearanceCertificateDetails(idNo: idNo, dateIssued: dateIssued)
 }
 
+func getPSVBadgeDetails(texts: [String]) -> PSVBadgeDetails? {
+    let cleanedTexts = texts.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+    
+    if cleanedTexts.isEmpty {
+        return nil
+    }
+    
+    var licenceNo: String?
+    var expiryDate: Date?
+    
+    let dateTexts = texts.filter({ Date.parseLicenseDate2(dateString: $0) != nil || Date.parsePSVDate(dateString: $0) != nil })
+    
+    if dateTexts.count > 1 {
+        let dateText = dateTexts[1]
+        
+        expiryDate = Date.parseLicenseDate2(dateString: dateText)
+        
+        if expiryDate == nil {
+            expiryDate = Date.parsePSVDate(dateString: dateText)
+        }
+    }
+    
+    if expiryDate == nil {
+        if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("expiry") || $0.containsIgnoringCase("exp1ry") ||
+            $0.containsIgnoringCase("explry") || $0.containsIgnoringCase("exoiry") || $0.containsIgnoringCase("exdiry") }) {
+            let text = cleanedTexts[index]
+                        
+            if let dateText = text.components(separatedBy: " ").first(where: { Date.parseLicenseDate2(dateString: $0) != nil || Date.parsePSVDate(dateString: $0) != nil }) {
+                expiryDate = Date.parseLicenseDate2(dateString: dateText)
+                
+                if expiryDate == nil {
+                    expiryDate = Date.parsePSVDate(dateString: dateText)
+                }
+            }
+        }
+    }
+    
+    if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("dl-") || $0.containsIgnoringCase("di-") || $0.containsIgnoringCase("d1-") || $0.containsIgnoringCase("ol-") || $0.containsIgnoringCase("oi-") || $0.containsIgnoringCase("o1-") }) {
+        if cleanedTexts.count >= index {
+            let components = cleanedTexts[index].components(separatedBy: "-")
+            
+            if components.count > 1, let licenceText = components.last {
+                licenceNo = licenceText
+            }
+        }
+    }
+    
+    if licenceNo == nil {
+        if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("dl n") || $0.containsIgnoringCase("di n") || $0.containsIgnoringCase("0l n") || $0.containsIgnoringCase("ol-") || $0.containsIgnoringCase("oi-") || $0.containsIgnoringCase("o1-") }) {
+            if cleanedTexts.count >= (index + 1) {
+                licenceNo  = texts[index + 1]
+            }
+        }
+    }
+    
+    return PSVBadgeDetails(licenceNo: licenceNo, expiryDate: expiryDate)
+}
+

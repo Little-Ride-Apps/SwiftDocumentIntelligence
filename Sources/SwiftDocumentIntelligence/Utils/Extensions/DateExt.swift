@@ -35,4 +35,11 @@ extension Date {
         formatter.dateFormat = "dd MMMM yyyy"
         return formatter.date(from: dateString)
     }
+    
+    static func parsePSVDate(dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: Locale.current.languageCode ?? "en")
+        formatter.dateFormat = "dd/MM/yyyy"
+        return formatter.date(from: dateString)
+    }
 }

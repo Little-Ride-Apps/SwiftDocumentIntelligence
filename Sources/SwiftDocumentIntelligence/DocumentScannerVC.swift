@@ -129,6 +129,7 @@ class DocumentScannerVC: DocumentBaseViewController {
     private var backIdDetails: BackIDCardDetails?
     private var licenseDetails: DrivingLicenseDetails?
     private var policeClearanceCertificateDetails: PoliceClearanceCertificateDetails?
+    private var psvBadgeDetails: PSVBadgeDetails?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -520,15 +521,15 @@ extension DocumentScannerVC: AVCapturePhotoCaptureDelegate {
         self.dismiss(animated: true) {
             switch self.documentType {
             case .ID_FRONT:
-                self.delegate?.didCaptureFrontID(image: image, details: self.frontIDDetails)
+                self.delegate?.didCaptureFrontID?(image: image, details: self.frontIDDetails)
             case .ID_BACK:
-                self.delegate?.didCaptureBackID(image: image, details: self.backIdDetails)
+                self.delegate?.didCaptureBackID?(image: image, details: self.backIdDetails)
             case .CERTIFICATE_OF_GOOD_CONDUCT:
-                self.delegate?.didCapturePoliceClearanceCertificate(image: image, details: self.policeClearanceCertificateDetails)
+                self.delegate?.didCapturePoliceClearanceCertificate?(image: image, details: self.policeClearanceCertificateDetails)
             case .DRIVING_LICENSE:
-                self.delegate?.didCaptureDrivingLicense(image: image, details: self.licenseDetails)
+                self.delegate?.didCaptureDrivingLicense?(image: image, details: self.licenseDetails)
             case .PSV_BADGE:
-                break
+                self.delegate?.didCapturePSVbadge?(image: image, details: self.psvBadgeDetails)
             }
         }
         
@@ -560,6 +561,8 @@ extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
         
         if documentType == .CERTIFICATE_OF_GOOD_CONDUCT {
             hasFirstText = texts.contains(where: { $0.containsIgnoringCase(firstText) })
+        } else if documentType == .PSV_BADGE {
+            hasFirstText = texts.contains(where: { $0.containsIgnoringCase("republic of kenya") || $0.containsIgnoringCase("psv badge") || $0.containsIgnoringCase("psu badge") || $0.containsIgnoringCase("osu badge") || $0.containsIgnoringCase("ntsa") })
         } else {
             if let firstText = texts.first, firstText.containsIgnoringCase(self.firstText) {
                 hasFirstText = true
@@ -623,7 +626,7 @@ extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
                 }
             case .CERTIFICATE_OF_GOOD_CONDUCT:
                 let policeClearanceCertificateDetails = getPoliceClearanceCertificateDetails(texts: texts)
-                printObject("frame policeClearanceCertificateDetails", licenseDetails)
+                printObject("frame policeClearanceCertificateDetails", policeClearanceCertificateDetails)
                 
                 if let policeClearanceCertificateDetails = policeClearanceCertificateDetails {
                     if policeClearanceCertificateDetails.idNo != nil && policeClearanceCertificateDetails.dateIssued != nil {
@@ -638,7 +641,21 @@ extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
                     }
                 }
             case .PSV_BADGE:
-                break
+                let psvBadgeDetails = getPSVBadgeDetails(texts: texts)
+                printObject("frame psvBadgeDetails", psvBadgeDetails)
+                
+                if let psvBadgeDetails = psvBadgeDetails {
+                    if psvBadgeDetails.licenceNo != nil && psvBadgeDetails.expiryDate != nil {
+                        self.psvBadgeDetails = psvBadgeDetails
+                        
+                        printObject("frame final psvBadgeDetails", psvBadgeDetails)
+                        
+                        self.isCapturingPhoto = true
+                        DispatchQueue(label: "capturePhoto", qos: .background).async { [weak self] in
+                            self?.capturePhoto()
+                        }
+                    }
+                }
             }
         } else {
             DispatchQueue.main.async { [weak self] in
@@ -651,12 +668,14 @@ extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
 }
 
 // Mark: - DocumentScannerDelegate
-public protocol DocumentScannerDelegate {
-    func didCaptureFrontID(image: UIImage, details: FrontIDCardDetails?)
+@objc public protocol DocumentScannerDelegate {
+    @objc optional func didCaptureFrontID(image: UIImage, details: FrontIDCardDetails?)
     
-    func didCaptureBackID(image: UIImage, details: BackIDCardDetails?)
+    @objc optional func didCaptureBackID(image: UIImage, details: BackIDCardDetails?)
     
-    func didCaptureDrivingLicense(image: UIImage, details: DrivingLicenseDetails?)
+    @objc optional func didCaptureDrivingLicense(image: UIImage, details: DrivingLicenseDetails?)
     
-    func didCapturePoliceClearanceCertificate(image: UIImage, details: PoliceClearanceCertificateDetails?)
+    @objc optional func didCapturePoliceClearanceCertificate(image: UIImage, details: PoliceClearanceCertificateDetails?)
+    
+    @objc optional func didCapturePSVbadge(image: UIImage, details: PSVBadgeDetails?)
 }
