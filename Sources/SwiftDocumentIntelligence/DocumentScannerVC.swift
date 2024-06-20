@@ -110,7 +110,6 @@ class DocumentScannerVC: DocumentBaseViewController {
     private var captureSession = AVCaptureSession()
     private let videoOutput = AVCaptureVideoDataOutput()
     
-    
     private var code: String?
     
     private var scannedCode = UILabel()
@@ -129,6 +128,7 @@ class DocumentScannerVC: DocumentBaseViewController {
     private var frontIDDetails: FrontIDCardDetails?
     private var backIdDetails: BackIDCardDetails?
     private var licenseDetails: DrivingLicenseDetails?
+    private var policeClearanceCertificateDetails: PoliceClearanceCertificateDetails?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -193,7 +193,7 @@ class DocumentScannerVC: DocumentBaseViewController {
             lblTitle.text = "ID Back".localized
             lblMessage.text = "Align your ID within the rectangle".localized
         case .CERTIFICATE_OF_GOOD_CONDUCT:
-            firstText = "national police service"
+            firstText = "POLICE CLEARANCE CERTIFICATE"
             aspectRatio = 70 / 99
             lblTitle.text = "Police clearance certificate".localized
             lblMessage.text = "Align your certificate within the rectangle".localized
@@ -524,7 +524,7 @@ extension DocumentScannerVC: AVCapturePhotoCaptureDelegate {
             case .ID_BACK:
                 self.delegate?.didCaptureBackID(image: image, details: self.backIdDetails)
             case .CERTIFICATE_OF_GOOD_CONDUCT:
-                break
+                self.delegate?.didCapturePoliceClearanceCertificate(image: image, details: self.policeClearanceCertificateDetails)
             case .DRIVING_LICENSE:
                 self.delegate?.didCaptureDrivingLicense(image: image, details: self.licenseDetails)
             case .PSV_BADGE:
@@ -555,8 +555,18 @@ extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
         let texts = image.getRecognizedText(recognitionLevel: .accurate)
         
         printObject("frame texts", texts)
-                
-        if let firstText = texts.first, firstText.containsIgnoringCase(self.firstText) {
+        
+        var hasFirstText = false
+        
+        if documentType == .CERTIFICATE_OF_GOOD_CONDUCT {
+            hasFirstText = texts.contains(where: { $0.containsIgnoringCase(firstText) })
+        } else {
+            if let firstText = texts.first, firstText.containsIgnoringCase(self.firstText) {
+                hasFirstText = true
+            }
+        }
+
+        if hasFirstText {
             DispatchQueue.main.async { [weak self] in
                 self?.changeStrokeColor(canReadText: true)
                 self?.btnCapture.isEnabled = true
@@ -612,7 +622,21 @@ extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
                     }
                 }
             case .CERTIFICATE_OF_GOOD_CONDUCT:
-                break
+                let policeClearanceCertificateDetails = getPoliceClearanceCertificateDetails(texts: texts)
+                printObject("frame policeClearanceCertificateDetails", licenseDetails)
+                
+                if let policeClearanceCertificateDetails = policeClearanceCertificateDetails {
+                    if policeClearanceCertificateDetails.idNo != nil && policeClearanceCertificateDetails.dateIssued != nil {
+                        self.policeClearanceCertificateDetails = policeClearanceCertificateDetails
+                        
+                        printObject("frame final policeClearanceCertificateDetails", policeClearanceCertificateDetails)
+                        
+                        self.isCapturingPhoto = true
+                        DispatchQueue(label: "capturePhoto", qos: .background).async { [weak self] in
+                            self?.capturePhoto()
+                        }
+                    }
+                }
             case .PSV_BADGE:
                 break
             }
@@ -633,4 +657,6 @@ public protocol DocumentScannerDelegate {
     func didCaptureBackID(image: UIImage, details: BackIDCardDetails?)
     
     func didCaptureDrivingLicense(image: UIImage, details: DrivingLicenseDetails?)
+    
+    func didCapturePoliceClearanceCertificate(image: UIImage, details: PoliceClearanceCertificateDetails?)
 }

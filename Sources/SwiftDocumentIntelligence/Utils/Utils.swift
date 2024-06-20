@@ -108,7 +108,7 @@ func getFrontIDCardDetails(texts: [String]) -> FrontIDCardDetails? {
             } else if idNoText.hasNumber() {
                 idNo = idNoText.onlyDigits()
             } else if cleanedTexts.count > (index + 1) {
-                idNo = cleanedTexts[index + 1]
+                idNo = cleanedTexts[index + 1].onlyDigits()
             }
         }
     }
@@ -278,7 +278,7 @@ func getDrivingLicenseDetails(texts: [String]) -> DrivingLicenseDetails? {
             if idNoText.hasNumber() {
                 idNo = idNoText.onlyDigits()
             } else if cleanedTexts.count > (index + 1) {
-                idNo = cleanedTexts[index + 1]
+                idNo = cleanedTexts[index + 1].onlyDigits()
             }
         }
     }
@@ -298,5 +298,53 @@ func getDrivingLicenseDetails(texts: [String]) -> DrivingLicenseDetails? {
     }
     
     return DrivingLicenseDetails(surname: surname, otherNames: otherNames, idNo: idNo, licenceNo: licenseNo, dateofBirth: dateofBirth, gender: gender, bloodGroup: bloodGroup, dateIssued: dateIssued, expiryDate: expiryDate)
+}
+
+func getPoliceClearanceCertificateDetails(texts: [String]) -> PoliceClearanceCertificateDetails? {
+    let cleanedTexts = texts.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+    
+    if cleanedTexts.isEmpty {
+        return nil
+    }
+    
+    var idNo: String?
+    var dateIssued: Date?
+    
+    if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("date") || $0.containsIgnoringCase("oate") ||
+        $0.containsIgnoringCase("0ate") }) {
+        let text = cleanedTexts[index]
+        
+        var components: [String] = []
+        
+        if text.contains(".") {
+            components = text.components(separatedBy: ".")
+        } else if text.contains(",") {
+            components = text.components(separatedBy: ",")
+        }
+        
+        if let last = components.last?.trimmingCharacters(in: .whitespacesAndNewlines), !last.isEmpty {
+            dateIssued = Date.parseLicenseDate2(dateString: last)
+        }
+    }
+    
+    if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("ID N") || $0.containsIgnoringCase("iD N") || $0.containsIgnoringCase("Io N") }) {
+        if cleanedTexts.count >= index {
+            let idNoText = cleanedTexts[index]
+            
+            if idNoText.hasNumber() {
+                idNo = idNoText.onlyDigits()
+            } else if cleanedTexts.count > (index + 1) {
+                idNo = cleanedTexts[index + 1].onlyDigits()
+            }
+        }
+    }
+    
+    if let idNo = idNo, let _ = Int(idNo) {
+        
+    } else {
+        idNo = nil
+    }
+    
+    return PoliceClearanceCertificateDetails(idNo: idNo, dateIssued: dateIssued)
 }
 
