@@ -43,9 +43,37 @@ func getFrontIDCardDetails(texts: [String]) -> FrontIDCardDetails? {
     var dateIssued: Date?
     var fullName: String?
     
-    if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("full") || $0.containsIgnoringCase("name") }) {
-        if cleanedTexts.count > (index + 1) {
-            fullName = cleanedTexts[index + 1]
+    if cleanedTexts.first(where: { $0.containsIgnoringCase("national") }) != nil || cleanedTexts.first(where: { $0.containsIgnoringCase("identity") }) != nil || cleanedTexts.first(where: { $0.containsIgnoringCase("card") }) != nil {
+        var surname: String?
+        var givenName: String?
+        
+        if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("rname") }) {
+            if cleanedTexts.count > (index + 1) {
+                surname = cleanedTexts[index + 1]
+            }
+        }
+        
+        if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("givenname") || $0.containsIgnoringCase(" name") }) {
+            if cleanedTexts.count > (index + 1) {
+                givenName = cleanedTexts[index + 1]
+            }
+        }
+        
+        if let surname = surname, let givenName = givenName {
+            let formatter = PersonNameComponentsFormatter()
+            if #available(iOS 15.0, *) {
+                formatter.locale = Locale(identifier: Locale.current.languageCode ?? "en")
+            }
+            var components = PersonNameComponents()
+            components.givenName = givenName
+            components.familyName = surname
+            fullName = formatter.string(from: components)
+        }
+    } else {
+        if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("full") || $0.containsIgnoringCase("name") }) {
+            if cleanedTexts.count > (index + 1) {
+                fullName = cleanedTexts[index + 1]
+            }
         }
     }
     
@@ -60,6 +88,10 @@ func getFrontIDCardDetails(texts: [String]) -> FrontIDCardDetails? {
         if cleanedTexts.count > (index + 1) {
             gender = cleanedTexts[index + 1]
         }
+    }
+    
+    if let myGender = gender, !myGender.containsIgnoringCase("male") && !myGender.containsIgnoringCase("male") {
+        gender = nil
     }
     
     if gender == nil {
