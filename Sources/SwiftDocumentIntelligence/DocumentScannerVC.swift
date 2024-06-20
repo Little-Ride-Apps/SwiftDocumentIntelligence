@@ -122,7 +122,7 @@ class DocumentScannerVC: DocumentBaseViewController {
     var documentType = DocumentType.ID_FRONT
     var delegate: DocumentScannerDelegate?
     
-    private var firstText = "jamhuri ya kenya"
+    private var validationTexts: [String] = []
     private var aspectRatio: CGFloat = 8 / 5
     
     private var frontIDDetails: FrontIDCardDetails?
@@ -184,27 +184,27 @@ class DocumentScannerVC: DocumentBaseViewController {
         
         switch documentType {
         case .ID_FRONT:
-            firstText = "jamhuri ya kenya"
+            validationTexts = ["jamhuri ya kenya", "REPUBLIC OF KENYA"]
             aspectRatio = 8 / 5
             lblTitle.text = "ID Front".localized
             lblMessage.text = "Align your ID within the rectangle".localized
         case .ID_BACK:
-            firstText = "district"
+            validationTexts = ["district", "county"]
             aspectRatio = 8 / 5
             lblTitle.text = "ID Back".localized
             lblMessage.text = "Align your ID within the rectangle".localized
         case .CERTIFICATE_OF_GOOD_CONDUCT:
-            firstText = "POLICE CLEARANCE CERTIFICATE"
+            validationTexts = ["POLICE CLEARANCE CERTIFICATE"]
             aspectRatio = 70 / 99
             lblTitle.text = "Police clearance certificate".localized
             lblMessage.text = "Align your certificate within the rectangle".localized
         case .PSV_BADGE:
-            firstText = "republic of kenya"
+            validationTexts = ["republic of kenya", "ntsa", "psv badge", "psu badge", "osu badge"]
             aspectRatio = 8 / 5
             lblTitle.text = "PSV badge".localized
             lblMessage.text = "Align your PSV badge within the rectangle".localized
         case .DRIVING_LICENSE:
-            firstText = "driving licence"
+            validationTexts = ["driving licence"]
             aspectRatio = 8 / 5
             lblTitle.text = "Driving Licence".localized
             lblMessage.text = "Align your licence within the rectangle".localized
@@ -557,19 +557,16 @@ extension DocumentScannerVC: AVCaptureVideoDataOutputSampleBufferDelegate {
         
         printObject("frame texts", texts)
         
-        var hasFirstText = false
-        
-        if documentType == .CERTIFICATE_OF_GOOD_CONDUCT {
-            hasFirstText = texts.contains(where: { $0.containsIgnoringCase(firstText) })
-        } else if documentType == .PSV_BADGE {
-            hasFirstText = texts.contains(where: { $0.containsIgnoringCase("republic of kenya") || $0.containsIgnoringCase("psv badge") || $0.containsIgnoringCase("psu badge") || $0.containsIgnoringCase("osu badge") || $0.containsIgnoringCase("ntsa") })
-        } else {
-            if let firstText = texts.first, firstText.containsIgnoringCase(self.firstText) {
-                hasFirstText = true
+        let containsValidationText = texts.contains { text in
+            for validationText in self.validationTexts {
+                if text.containsIgnoringCase(validationText) {
+                    return true
+                }
             }
+            return false
         }
 
-        if hasFirstText {
+        if containsValidationText {
             DispatchQueue.main.async { [weak self] in
                 self?.changeStrokeColor(canReadText: true)
                 self?.btnCapture.isEnabled = true

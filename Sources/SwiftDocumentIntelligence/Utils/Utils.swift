@@ -36,10 +36,6 @@ func getFrontIDCardDetails(texts: [String]) -> FrontIDCardDetails? {
         return nil
     }
     
-    if !cleanedTexts[0].containsIgnoringCase("JAMHURI YA KENYA") {
-        return nil
-    }
-    
     var idNo: String?
     var dateofBirth: Date?
     var gender: String?
@@ -129,18 +125,29 @@ func getBackIDCardDetails(texts: [String]) -> BackIDCardDetails? {
         return nil
     }
     
-    if !cleanedTexts[0].containsIgnoringCase("district") {
-        return nil
-    }
-    
+    var county: String?
     var district: String?
     var division: String?
     var location: String?
     var subLocation: String?
     
+    if let index = cleanedTexts.firstIndex(where: { !$0.contains("-") && ($0.equalsIgnoringCase("county") || $0.equalsIgnoringCase("oounty") || $0.equalsIgnoringCase("0ounty") || $0.equalsIgnoringCase("c0unty")) }) {
+        if cleanedTexts.count > (index + 1) {
+            county = cleanedTexts[index + 1]
+        }
+    }
+    
     if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("district") || $0.containsIgnoringCase("oistrict") || $0.containsIgnoringCase("d1str1ct") }) {
         if cleanedTexts.count > (index + 1) {
             district = cleanedTexts[index + 1]
+        }
+    }
+    
+    if (district ?? "").isEmpty {
+        if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("-county") || $0.containsIgnoringCase("-oounty") || $0.containsIgnoringCase("-0ounty") || $0.containsIgnoringCase("-c0unty") || $0.containsIgnoringCase(" county") || $0.containsIgnoringCase(" oounty") || $0.containsIgnoringCase(" 0ounty") || $0.containsIgnoringCase(" c0unty") }) {
+            if cleanedTexts.count > (index + 1) {
+                district = cleanedTexts[index + 1]
+            }
         }
     }
     
@@ -157,23 +164,22 @@ func getBackIDCardDetails(texts: [String]) -> BackIDCardDetails? {
         }
     }
     
-    if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("sub") || $0.containsIgnoringCase("sob") || $0.containsIgnoringCase("soo") }) {
+    if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("-location") || $0.containsIgnoringCase("-1ocation") || $0.containsIgnoringCase("-ldcat1on") ||
+        $0.containsIgnoringCase("-location") || $0.containsIgnoringCase(" location") || $0.containsIgnoringCase(" 1ocation") || $0.containsIgnoringCase(" ldcat1on") ||
+        $0.containsIgnoringCase(" location") ||
+        $0.containsIgnoringCase("surlocation") }) {
         if cleanedTexts.count > (index + 1) {
             subLocation = cleanedTexts[index + 1]
         }
     }
     
-    return BackIDCardDetails(district: district, division: division, location: location, subLocation: subLocation)
+    return BackIDCardDetails(district: district, division: division, location: location, subLocation: subLocation, county: county)
 }
 
 func getDrivingLicenseDetails(texts: [String]) -> DrivingLicenseDetails? {
     let cleanedTexts = texts.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
     
     if cleanedTexts.isEmpty {
-        return nil
-    }
-    
-    if !cleanedTexts[0].containsIgnoringCase("driving licence") {
         return nil
     }
     
@@ -398,7 +404,7 @@ func getPSVBadgeDetails(texts: [String]) -> PSVBadgeDetails? {
     if licenceNo == nil {
         if let index = cleanedTexts.firstIndex(where: { $0.containsIgnoringCase("dl n") || $0.containsIgnoringCase("di n") || $0.containsIgnoringCase("0l n") || $0.containsIgnoringCase("ol-") || $0.containsIgnoringCase("oi-") || $0.containsIgnoringCase("o1-") }) {
             if cleanedTexts.count >= (index + 1) {
-                licenceNo  = texts[index + 1]
+                licenceNo  = cleanedTexts[index + 1]
             }
         }
     }
