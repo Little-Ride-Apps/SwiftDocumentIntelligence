@@ -141,7 +141,7 @@ func getFrontIDCardDetails(texts: [String]) -> FrontIDCardDetails? {
         }
     }
     
-    if let idNo = idNo, let _ = Int(idNo) {
+    if let idNo = idNo, let _ = Int(idNo), idNo.count >= 5 {
         
     } else {
         idNo = nil
@@ -329,7 +329,7 @@ func getDrivingLicenseDetails(texts: [String]) -> DrivingLicenseDetails? {
         }
     }
     
-    if let idNo = idNo, let _ = Int(idNo) {
+    if let idNo = idNo, let _ = Int(idNo), idNo.count >= 5 {
         
     } else {
         idNo = nil
@@ -377,7 +377,7 @@ func getPoliceClearanceCertificateDetails(texts: [String]) -> PoliceClearanceCer
         }
     }
     
-    if let idNo = idNo, let _ = Int(idNo) {
+    if let idNo = idNo, let _ = Int(idNo), idNo.count >= 5 {
         
     } else {
         idNo = nil
