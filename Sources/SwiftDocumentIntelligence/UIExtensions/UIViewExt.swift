@@ -88,7 +88,7 @@ extension UIView {
     }
     
     
-    func showProgress(backgroundColor: UIColor = .clear) {
+    func showProgress(backgroundColor: UIColor = UIColor.black.withAlphaComponent(0.4)) {
         self.hideProgress()
         self.layer.masksToBounds = true
         self.clipsToBounds = true
