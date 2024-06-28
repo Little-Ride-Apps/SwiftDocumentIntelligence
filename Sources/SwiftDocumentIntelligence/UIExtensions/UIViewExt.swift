@@ -86,4 +86,42 @@ extension UIView {
             return nil
         }
     }
+    
+    
+    func showProgress(backgroundColor: UIColor = .clear) {
+        self.hideProgress()
+        self.layer.masksToBounds = true
+        self.clipsToBounds = true
+        let spinnerView = UIView()
+        spinnerView.tag = self.tag
+        spinnerView.backgroundColor = backgroundColor
+        spinnerView.isUserInteractionEnabled = true
+        spinnerView.layer.cornerRadius = self.layer.cornerRadius
+        var style: UIActivityIndicatorView.Style {
+            if #available(iOS 13.0, *) {
+                return UIActivityIndicatorView.Style.medium
+            }
+            
+            return UIActivityIndicatorView.Style.gray
+        }
+        let indicator = UIActivityIndicatorView.init(style: style)
+        indicator.transform = CGAffineTransform(scaleX: 1.5, y: 1.5)
+        indicator.color = .primaryColor
+        indicator.startAnimating()
+        DispatchQueue.main.async {
+            spinnerView.addSubview(indicator)
+            indicator.centerOnView(parentView: spinnerView)
+            self.addSubview(spinnerView)
+            spinnerView.pinToView(parentView: self)
+        }
+        
+    }
+    
+    func hideProgress() {
+        DispatchQueue.main.async {
+            if let view = self.subviews.filter({ $0.tag == self.tag}).first {
+                view.removeFromSuperview()
+            }
+        }
+    }
 }

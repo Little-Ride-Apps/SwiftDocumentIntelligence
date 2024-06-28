@@ -110,10 +110,6 @@ class DocumentScannerVC: DocumentBaseViewController {
     private var captureSession = AVCaptureSession()
     private let videoOutput = AVCaptureVideoDataOutput()
     
-    private var code: String?
-    
-    private var scannedCode = UILabel()
-    
     private let sessionQueue = DispatchQueue(label: "Capture Session Queue")
     private var boundingBox = CAShapeLayer()
     private var resetTimer: Timer?
@@ -420,18 +416,6 @@ class DocumentScannerVC: DocumentBaseViewController {
     
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         return .portrait
-    }
-    
-    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputMetadataObjects metadataObjects: [Any]!, from connection: AVCaptureConnection!) {
-        // This is the delegate'smethod that is called when a code is read
-        
-        printObject(metadataObjects)
-        for metadata in metadataObjects {
-            let readableObject = metadata as! AVMetadataMachineReadableCodeObject
-            let code = readableObject.stringValue
-            scannedCode.text = code
-            
-        }
     }
     
     private func checkCameraSettings() {
